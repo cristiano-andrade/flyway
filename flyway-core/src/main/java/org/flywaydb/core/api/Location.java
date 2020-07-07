@@ -35,6 +35,10 @@ public final class Location implements Comparable<Location> {
      * The prefix for filesystem locations.
      */
     public static final String FILESYSTEM_PREFIX = "filesystem:";
+    /**
+     * The prefix for s3 locations.
+     */
+    public static final String AWS_S3_PREFIX = "s3:";
 
     /**
      * The prefix part of the location. Can be either classpath: or filesystem:.
@@ -75,9 +79,9 @@ public final class Location implements Comparable<Location> {
             }
         } else if (isFileSystem()) {
             path = new File(path).getPath();
-        } else {
-            throw new FlywayException("Unknown prefix for location (should be either filesystem: or classpath:): "
-                    + normalizedDescriptor);
+        } else if (!isAwsS3()) {
+            throw new FlywayException("Unknown prefix for location (should be either filesystem:, classpath: or s3:): "
+                + normalizedDescriptor);
         }
 
         if (path.endsWith(File.separator)) {
@@ -101,6 +105,15 @@ public final class Location implements Comparable<Location> {
      */
     public boolean isFileSystem() {
         return FILESYSTEM_PREFIX.equals(prefix);
+    }
+
+    /**
+     * Checks whether this denotes a location in AWS S3.
+     *
+     * @return {@code true} if it does, {@code false} if it doesn't;
+     */
+    public boolean isAwsS3() {
+        return AWS_S3_PREFIX.equals(prefix);
     }
 
     /**

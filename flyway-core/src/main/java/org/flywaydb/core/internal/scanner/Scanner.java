@@ -15,22 +15,24 @@
  */
 package org.flywaydb.core.internal.scanner;
 
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import org.flywaydb.core.api.Location;
 import org.flywaydb.core.api.logging.Log;
 import org.flywaydb.core.api.logging.LogFactory;
 import org.flywaydb.core.internal.clazz.ClassProvider;
 import org.flywaydb.core.internal.resource.LoadableResource;
 import org.flywaydb.core.internal.resource.ResourceProvider;
+import org.flywaydb.core.internal.resource.s3.AwsS3Scanner;
 import org.flywaydb.core.internal.scanner.android.AndroidScanner;
-import org.flywaydb.core.internal.scanner.classpath.ClassPathLocationScanner;
 import org.flywaydb.core.internal.scanner.classpath.ClassPathScanner;
 import org.flywaydb.core.internal.scanner.classpath.ResourceAndClassScanner;
 import org.flywaydb.core.internal.scanner.filesystem.FileSystemScanner;
 import org.flywaydb.core.internal.util.FeatureDetector;
 import org.flywaydb.core.internal.util.StringUtils;
-
-import java.nio.charset.Charset;
-import java.util.*;
 
 /**
  * Scanner for Resources and Classes.
@@ -44,12 +46,9 @@ public class Scanner<I> implements ResourceProvider, ClassProvider<I> {
     /*
      * Constructor. Scans the given locations for resources, and classes implementing the specified interface.
      */
-    public Scanner(Class<I> implementedInterface, Collection<Location> locations, ClassLoader classLoader, Charset encoding
-
-
-
-            , ResourceNameCache resourceNameCache
-            , LocationScannerCache locationScannerCache
+    public Scanner(Class<I> implementedInterface, Collection<Location> locations,
+                   ClassLoader classLoader, Charset encoding, ResourceNameCache resourceNameCache,
+        LocationScannerCache locationScannerCache
     ) {
         FileSystemScanner fileSystemScanner = new FileSystemScanner(encoding
 
@@ -57,11 +56,15 @@ public class Scanner<I> implements ResourceProvider, ClassProvider<I> {
 
         );
 
+        AwsS3Scanner awsS3Scanner = new AwsS3Scanner(encoding);
+
         boolean android = new FeatureDetector(classLoader).isAndroidAvailable();
 
         for (Location location : locations) {
             if (location.isFileSystem()) {
                 resources.addAll(fileSystemScanner.scanForResources(location));
+            } else if (location.isAwsS3()) {
+                resources.addAll(awsS3Scanner.scanForResources(location));
             } else {
                 ResourceAndClassScanner<I> resourceAndClassScanner = android
                         ? new AndroidScanner<>(implementedInterface, classLoader, encoding, location)
